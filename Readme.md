@@ -37,3 +37,9 @@ Para rodar cada exemplo utilizar os comandos do node.js na raiz
 - node src/retry/consumer.js
 - node src/retry/producer.js
 - node src/dlq/consumer-dlq.js
+
+#### schedule
+
+- node src/schedule/setup.js
+- node src/schedule/consumer.js
+- node node src/schedule/producer.js
