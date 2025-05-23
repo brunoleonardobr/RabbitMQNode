@@ -13,7 +13,7 @@ async function consume() {
 
     // Converte o conteúdo da mensagem para string e depois para JSON
     const content = msg.content.toString();
-    const payload = JSON.parse(content);
+    const originalPayload = JSON.parse(content);
 
     // Recupera o número de tentativas anteriores (vem no header personalizado 'x-attempts')
     const attempts = msg.properties.headers["x-attempts"] || 0;
@@ -22,7 +22,7 @@ async function consume() {
 
     // Se já tentou 3 vezes, envia a mensagem para a Dead Letter Queue
     if (attempts >= 3) {
-      console.log(`❌ Enviando para DLQ: ${payload.id}`);
+      console.log(`❌ Enviando para DLQ: ${originalPayload.id}`);
 
       // Rejeita a mensagem → RabbitMQ envia para DLQ (definida em x-dead-letter-routing-key)
       // Isso ativa o header x-death automaticamente
@@ -30,16 +30,32 @@ async function consume() {
       return;
     }
 
-    // Simula falha no processamento e reencaminha para a retry_queue
-    console.log("⚠️ Simulando falha... reenfileirando para retry_queue");
+    // Simula erro: sistema indisponível
+    const erro = "Sistema indisponível";
+
+    console.log(`⚠️ Erro simulado: ${erro}`);
+    console.log(
+      "↩️ Reenfileirando para retry_queue com erro e tentativas atualizadas"
+    );
+
+    // Cria novo payload com erro incluso (para facilitar diagnóstico)
+    const newPayload = {
+      ...originalPayload,
+      erro,
+      tentativa: attempts + 1,
+    };
 
     // Envia a mesma mensagem para a fila de retry com o contador de tentativas incrementado
-    channel.sendToQueue("retry_queue", msg.content, {
-      persistent: true,
-      headers: {
-        "x-attempts": attempts + 1, // incrementa a tentativa
-      },
-    });
+    channel.sendToQueue(
+      "retry_queue",
+      Buffer.from(JSON.stringify(newPayload)),
+      {
+        persistent: true,
+        headers: {
+          "x-attempts": attempts + 1, // incrementa a tentativa
+        },
+      }
+    );
 
     // Marca a mensagem atual como processada
     channel.ack(msg);
